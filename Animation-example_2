@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <style>
+        *{
+            margin:0px;
+            padding:0px;
+        }
+        html,body{
+            font-size:12px;
+        }
+        #wrap{
+            width:400px;
+            height:400px;
+            margin:0 auto;
+            margin-top:50px;
+        }
+        #wrap ul{
+            width:100%;
+            height:100%;
+            list-style-type:none;
+            background:gray;
+        }
+        #wrap ul li{
+            width:120px;
+            height:120px;
+            float:left;
+            background:blue;
+            margin-left:10px;
+            margin-top:10px;
+            display:inline;
+        }
+    </style>
+</head>
+<body>
+    <div id="wrap">
+        <ul>
+            <li style="background:green;"></li>
+            <li style="background:green;"></li>
+            <li style="background:green;"></li>
+            <li style="background:yellow;"></li>
+            <li style="background:yellow;"></li>
+            <li style="background:yellow;"></li>
+            <li></li>
+            <li></li>
+            <li></li>
+        </ul>
+    </div>
+
+    <script>
+        var oDiv = document.getElementById("wrap"),
+            oUl = oDiv.getElementsByTagName("ul")[0],
+            oLis = oUl.getElementsByTagName("li"),
+            pos = [],
+            zIndex = 1;
+
+        toLayout();
+
+        each(oLis,function(item){
+            drag(item);
+        })
+
+        //拖拽函数
+        function drag(target){
+
+            addEvent(target,"mousedown",function(ev){
+                var mouseX = ev.clientX - oUl.offsetLeft - target.offsetLeft,
+                    mouseY = ev.clientY - oUl.offsetTop - target.offsetTop,
+                    targetT1 = target.offsetTop,
+                    targetL1 = target.offsetLeft,
+                    hitEles = [];
+
+                console.log(targetL1,targetT1);
+
+                target.style.zIndex = zIndex ++;
+
+                addEvent(document,"mousemove",moveHandler);
+
+                addEvent(target,"mouseup",upHandler)
+
+                function moveHandler(ev){
+                    var top = ev.clientY - oUl.offsetTop - mouseY,
+                        left = ev.clientX - oUl.offsetLeft - mouseX;
+
+                    hitEles = [];
+
+                    for(var i = 0; i < oLis.length ; i++){
+                        if(oLis[i] != target && hitTest(target,oLis[i])){
+                            hitEles.push(oLis[i]);
+                        }
+                    }
+
+                    target.style.top = top + "px";
+                    target.style.left = left + "px";
+
+                    return false;
+                }
+
+                function upHandler(){
+
+                    removeEvent(document,"mousemove",moveHandler);
+                    removeEvent(target,"mouseup",upHandler);
+
+                    var minNum = 99999,
+                        minIndex = -1;
+
+                    for(var i = 0,len = hitEles.length; i < len ; i++){
+                        var ct1 = target.offsetTop + target.offsetHeight/ 2,
+                            cl1 = target.offsetLeft + target.offsetWidth/ 2,
+                            ct2 = hitEles[i].offsetTop + hitEles[i].offsetHeight/ 2,
+                            cl2 = hitEles[i].offsetLeft + hitEles[i].offsetWidth/ 2,
+                            dist = Math.sqrt(Math.pow(ct2 - ct1,2)+Math.pow(cl2-cl1,2));
+
+                        if(dist < minNum){
+                            minNum = dist;
+                            minIndex = i;
+                        }
+                    }
+
+                    if(minIndex != -1){
+                        constant(target,{
+                            top: hitEles[minIndex].offsetTop,
+                            left: hitEles[minIndex].offsetLeft
+                        },400);
+                        constant(hitEles[minIndex],{
+                            top:targetT1,
+                            left:targetL1
+                        },400);
+
+                    }else{
+                        constant(target,{
+                            top:targetT1,
+                            left:targetL1
+                        },400);
+                    }
+                }
+            });
+        }
+
+        //碰撞检测函数
+        function hitTest(t1,t2){
+            var top1 = t1.offsetTop,
+                top2 = t2.offsetTop,
+                h1 = t1.offsetHeight,
+                h2 = t2.offsetHeight,
+                left1 = t1.offsetLeft,
+                left2 = t2.offsetLeft,
+                w1 = t1.offsetWidth,
+                w2 = t2.offsetWidth;
+
+            if(!(top1+h1<top2 || top2+h2<top1 || left1+w1 < left2 || left2+w2 < left1)){
+                return true;
+            }else{
+                return false;
+            }
+        }
+
+        //取绑事件
+        function removeEvent(target,eventName,callback){
+            var reg = /\s+/g,
+                    fnStr = callback.toString().replace(reg,''),
+                    handler;
+
+            handler = target[fnStr];
+
+            if(target.removeEventListener){
+                target.removeEventListener(eventName,handler,false);
+            }else if(target.detachEvent){
+                target.detachEvent("on"+eventName,handler);
+            }else{
+                target["on"+eventName] = null;
+            }
+        }
+
+        //布局转化
+        function toLayout(){
+            oUl.style.position = "relative";
+
+            for(var i = 0,len = oLis.length ; i < len ; i++){
+                var top = oLis[i].offsetTop,
+                        left = oLis[i].offsetLeft;
+
+                pos.push({
+                    top:top,
+                    left:left
+                });
+            }
+
+            for(var i = 0,len = oLis.length ; i < len ; i++){
+                var item = oLis[i];
+                item.style.position = "absolute";
+                item.style.top = pos[i].top + "px";
+                item.style.left = pos[i].left + "px";
+                item.style.margin = "0px";
+            }
+        }
+
+        //事件注册
+        function addEvent(target,eventName,callback){
+            var fnStr = callback.toString().replace(/\s+/g,'');
+
+            target[fnStr] = handler;
+
+            if(target.addEventListener){
+                target.addEventListener(eventName,handler,false);
+            }else if(target.attachEvent){
+                target.attachEvent("on"+eventName,handler);
+            }else{
+                target["on"+eventName] = handler;
+            }
+
+            function handler(ev){
+                var event = ev || window.event,
+                        stopPropagation = event.stopPropagation,
+                        preventDefault = event.preventDefault;
+
+                event.target = event.target || event.srcElement;
+                event.currentTarget = event.currentTarget || target;
+                event.stopPropagation = function(){
+                    if(!event.stopPropagation){
+                        event.cancelBubble = true;
+                    }else{
+                        stopPropagation.call(event);
+                    }
+                };
+                event.preventDefault = function(){
+                    if(!event.preventDefault){
+                        event.returnValue = false;
+                    }else{
+                        preventDefault.call(event);
+                    }
+                }
+
+                var flag = callback.call(target,event);
+
+                if(flag === false){
+                    event.stopPropagation();
+                    event.preventDefault();
+                }
+            }
+        }
+
+        //匀速运动
+        function constant(target,json,time,fn){
+            var timeScale = 1000/60,
+                    count = Math.floor(time / timeScale),
+                    begin,scale;
+
+            for(var key in json){
+                begin = parseFloat(window.getComputedStyle(target,null)[key]),
+                        scale = (json[key] - begin) / count;
+                target[key] = scale;
+            }
+
+            clearInterval(target.timer);
+
+            target.timer = setInterval(function(){
+                var stop = true;
+
+                for(var key in json){
+                    var oldValue = parseFloat(window.getComputedStyle(target,null)[key]),
+                            newValue = oldValue + target[key];
+
+                    if(oldValue != json[key]){
+                        stop = false;
+                    }else{
+                        continue;
+                    }
+
+                    if(Math.abs(newValue - json[key]) < 1){
+                        target.style[key] = json[key] + "px";
+                    }else{
+                        target.style[key] = newValue + "px";
+                    }
+                }
+
+                if(stop){
+                    clearInterval(target.timer);
+                    fn.apply(this);
+                }
+
+            },timeScale);
+        }
+
+        //兼容的each函数
+        function each(arr,fn){
+
+            arr = makeArray(arr);
+
+            if([].forEach){
+                arr.forEach(fn);
+            }else{
+                for(var i = 0 , len = arr.length ; i < len ; i++){
+                    fn.apply(arr,[arr[i],i,arr]);
+                }
+            }
+        }
+
+        //转化为普通数组
+        function makeArray(obj){
+            var tmp = [];
+
+            if(is(obj,"NodeList") || (obj.length && obj[0])){
+                for(var i = 0, len = obj.length ; i < len; i ++){
+                    tmp.push(obj[i]);
+                }
+            }else{
+                tmp = [obj];
+            }
+
+            return tmp;
+        }
+
+        //类型判断函数
+        function is(obj,type){
+            return Object.prototype.toString.call(obj) == "[object "+type+"]";
+        }
+
+
+    </script>
+</body>
+</html>
